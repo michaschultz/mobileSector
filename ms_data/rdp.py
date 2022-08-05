@@ -1,9 +1,8 @@
 import numpy as np
 
 
-
 @staticmethod
-def simplify(points: np.array, tolerance: float, anchors: list) -> list:
+def simplify(points, tolerance, anchors):
 	sqTolerance = tolerance * tolerance
 	# !!! ATTENTION python list starts with [] not as JAVA list with () !!!
 	pos = [0]
@@ -17,7 +16,6 @@ def simplify(points: np.array, tolerance: float, anchors: list) -> list:
     
 	anchors.clear()
 	anchors.extend(pos)
-	return pos
 
 
 # 	static void simplifyDPStep(float[][] points, int first, int last, float sqTolerance, ArrayList<Integer> pos)
