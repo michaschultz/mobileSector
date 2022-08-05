@@ -2,6 +2,9 @@
     delete aircraft that exit the area. Statistics on these flights can be
     logged with the FLSTLOG logger. """
 import numpy as np
+import json
+import os
+
 # Import the global bluesky objects. Uncomment the ones you need
 from bluesky import traf, sim  #, settings, navdb, traf, sim, scr, tools
 from bluesky.tools import datalog, areafilter
@@ -68,15 +71,23 @@ def init_plugin():
         }
 
     stackfunctions = {
-        'ARA': [
+        'MMOV': [
             'ARA Shapename/OFF or AREA lat,lon,lat,lon,[top,bottom]',
             '[float/txt,float,float,float,alt,alt]',
             ara.set_area,
             'Create sector'
-        ]
+        ],
+        'MSEC': [
+            'MSEC',
+            '',
+            ara.load_firs,
+            'Start mobile sector'
+        ],
     }
     # init_plugin() should always return these two dicts.
     return config, stackfunctions
+
+
 
 class Ara(Entity):
     ''' Traffic area: delete traffic when it leaves this area (so not when outside)'''
@@ -107,14 +118,14 @@ class Ara(Entity):
             2D and 3D distance [m], and work done (force*distance) [J] '''
         name   = "SINF"
         if areafilter.hasArea(name):
-        	coords = areafilter.basic_shapes[name].coordinates
-        	for i in range(len(coords)):
-        	   coords[i] += 0.1
-        	areafilter.defineArea(name, "POLY", coords)
+            coords = areafilter.basic_shapes[name].coordinates
+            for i in range(len(coords)):
+                coords[i] += 0.1
+            areafilter.defineArea(name, "POLY", coords)
         	
      
 
-    def set_area(self, *args, exparea=False):
+    def set_area(self, *args):
         ''' Set Experiment Area. Aircraft leaving the experiment area are deleted.
         Input can be existing shape name, or a box with optional altitude constraints.'''
         coords = [1, 100, 1, 101, 2, 101, 2, 100]
@@ -123,7 +134,31 @@ class Ara(Entity):
         print(coords)		
 
 
+
+
+    def load_firs(self, *args):
+        firs = ""
+        print("--------------")
+        print(os.getcwd())
+        print("--------------")
+        with open('plugins\\ms_data\\fir.json', 'r') as f:
+            firs = json.load(f)
+
+        # for every entry check NAME and coordinates of FIR
+        for fir in firs['features']:
+            name = "FIR"+fir['properties']['name']
+            # extract all coordinates for
+            coords = fir['geometry']['coordinates'][0]
+
+            #transfer to array structure
+            arr = np.array(coords)
+
+            # switch columns from json file lat|lon to lon|lat
+            arr.T[[0,1]] = arr.T[[1,0]]
+
+            # create aera for each FIR            
+            areafilter.defineArea(name, "POLY", arr.flatten().tolist())
 	
 
-    def set_taxi(self, flag,alt=1500*ft):
-        ''' Taxi ON/OFF to autodelete below a certain altitude if taxi is off'''
+    # def set_taxi(self, flag,alt=1500*ft):
+    #     ''' Taxi ON/OFF to autodelete below a certain altitude if taxi is off'''
