@@ -138,10 +138,7 @@ class Ara(Entity):
 
     def load_firs(self, *args):
         firs = ""
-        print("--------------")
-        print(os.getcwd())
-        print("--------------")
-        with open('plugins\\ms_data\\fir.json', 'r') as f:
+        with open('plugins\\msdata\\fir.json', 'r') as f:
             firs = json.load(f)
 
         # for every entry check NAME and coordinates of FIR

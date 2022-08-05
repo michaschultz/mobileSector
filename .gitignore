@@ -1,4 +1,5 @@
 
-ms_data/*
+asas/
 *.pyc
-*.py
+/*.py
+
