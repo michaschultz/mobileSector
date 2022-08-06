@@ -2,7 +2,7 @@ import numpy as np
 
 
 
-@staticmethod
+# @staticmethod
 def simplify(points: np.array, tolerance: float, anchors : list) -> list:
 	sqTolerance = tolerance * tolerance
 	# !!! ATTENTION python list starts with [] not as JAVA list with () !!!
