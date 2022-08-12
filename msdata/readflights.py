@@ -22,6 +22,10 @@ class ReadFlights():
         rf = ReadFlights()
         rf.open()
 
+    def open(self, fileName : str = "flights.pkl", nMax : int = 1):
+
+        if exists(fileName):
+            self.df = pd.read_pickle(fileName)
 
 
     def open(self, fileName : str = "c:\\Users\\mschultz\\Downloads\\t_future_flas_360_ats_01.csv.xz", nMax : int = 1):
@@ -32,7 +36,7 @@ class ReadFlights():
             self.df = pd.read_pickle(pklFileName)
             return
 
-        return
+        # return
         n = 0
         header = ""
         oldId = ""
