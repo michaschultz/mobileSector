@@ -22,13 +22,16 @@ class ReadFlights():
         rf = ReadFlights()
         rf.open()
 
-    def open(self, fileName : str = "flights.pkl", nMax : int = 1):
+    def openPKL(self, fileName : str = "flights.pkl", nMax : int = 1):
 
         if exists(fileName):
             self.df = pd.read_pickle(fileName)
+        else:
+            print("file not exists.")
 
 
-    def open(self, fileName : str = "c:\\Users\\mschultz\\Downloads\\t_future_flas_360_ats_01.csv.xz", nMax : int = 1):
+
+    def openXZ(self, fileName : str = "c:\\Users\\mschultz\\Downloads\\t_future_flas_360_ats_01.csv.xz", nMax : int = 1):
 
         pklFileName = fileName.replace("csv.xz","pkl")
 
@@ -240,7 +243,7 @@ class ReadFlights():
 
 
 
-
+    ''' create bluesky flight'''
     def createBSFlight(self):
         # find row which meets the criteria
         f = dff[dff['time'] > 0].index[0]
@@ -296,7 +299,7 @@ class ReadFlights():
         # return fig
 
 
-    def plotFlights(self, flightIDs : list, flightResample :list = None, time : list = None):
+    def plotFlights(self, flightIDs : list, flightResample :list = None, time : list = None, df = None):
         # initialize an axis
         fig, ax = plt.subplots(figsize=(20,10))
 
@@ -308,13 +311,16 @@ class ReadFlights():
 
         flights = []
 
-        if time == None:
-            flights = self.df[self.df['id'].isin(flightIDs)]
+        if df is None:
+            if time == None:
+                flights = self.df[self.df['id'].isin(flightIDs)]
+            else:
+                flights = self.df[
+                    self.df['id'].isin(flightIDs) 
+                    & self.df['time'].between(time[0], time[1])
+                ]
         else:
-            flights = self.df[
-                  self.df['id'].isin(flightIDs) 
-                & self.df['time'].between(time[0], time[1])
-            ]
+            flights = df
         
         flights.plot(x="longitude", y="latitude", c="altitude", kind="scatter", colormap= "YlOrRd", s=.1, ax=ax)
 
