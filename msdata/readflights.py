@@ -1,8 +1,10 @@
 import rdp as RDP
+
 import lzma
 import pandas as pd
 import numpy as np
 from io import StringIO
+from tqdm import tqdm
 from pyproj import Transformer
 import geopandas as gp
 import seaborn as sns
@@ -22,13 +24,23 @@ class ReadFlights():
         rf = ReadFlights()
         rf.open()
 
+    
     def openPKL(self, fileName : str = "flights.pkl", nMax : int = 1):
 
         if exists(fileName):
-            self.df = pd.read_pickle(fileName)
+            df = pd.read_pickle(fileName)
         else:
             print("file not exists.")
 
+        # create unique flight ids
+        list = []
+        c = 0
+        for a, b in zip (df['id'].shift(), df['id']):
+            if a is not b:
+                c = c + 1
+            list.append(c)
+        df['id_'] = list
+        self.df = df
 
 
     def openXZ(self, fileName : str = "c:\\Users\\mschultz\\Downloads\\t_future_flas_360_ats_01.csv.xz", nMax : int = 1):
@@ -174,22 +186,32 @@ class ReadFlights():
         return "%02d:%02d:%02d" % (hour, min, sec) 
 
 
-    def resample(self, flightID : str , sampleTime : str = "60s"):
 
-        dr = self.df[self.df['id'] == flightID]
+    def getResampledFlights(self, flightIDs_, sampleTime : str = "60s", df = None):
+        print("resample flights")
+        dfs = []
+        for flightID_ in tqdm(flightIDs_):
+            dfs.append(self.resample(flightID_, sampleTime))
+        return pd.concat(dfs)
         
+
+
+    def resample(self, flightID_ : str = None, sampleTime : str = "60s"):
+
+        dr = self.df[self.df['id_'] == flightID_]
+        # if len(dr.index) == 0:
+        #     print("flight " + str(flightID) + " not found.")
+        
+
         wgs2merc = Transformer.from_crs("epsg:4326", "epsg:3857")
         merc2wgs = Transformer.from_crs("epsg:3857", "epsg:4326")
-
-        # get a copy of simplified dataframe
-        # dr = df.copy()
 
         # resample the original dataframe
         # column ['id'] was deleted: --> non-numerical columns are removed in resample.
         dr_ = dr.resample(sampleTime).mean()
 
         # it makes no sence for interpolation of these values
-        dr_ = dr_.drop(['speed','dir'], axis = 1)
+        dr_ = dr_.drop(['speed','dir','id_'], axis = 1)
 
         # consider shortes way is via pacific by checking longitudinal distance
         isLeft = abs(dr_['longitude'].max() - dr_['longitude'].min()) > 180
@@ -229,9 +251,10 @@ class ReadFlights():
         else:
             dr_['latitude'], dr_['longitude'] = wgs2merc.transform(dr_['latitude'], dr_['longitude'])
             dr_ = dr_.resample(sampleTime).mean()
+            dr_ = dr_.interpolate('linear')
             dr_['latitude'], dr_['longitude'] = merc2wgs.transform(dr_['latitude'], dr_['longitude'])
 
-        # remove all entry created, which are before first occurance and after last occurance
+        # remove all entries created, which are before first occurance and after last occurance
         dr_ = dr_.loc[dr.index[0]:dr.index[-1]]
 
         # join datasets
@@ -299,6 +322,8 @@ class ReadFlights():
         # return fig
 
 
+
+
     def plotFlights(self, flightIDs : list, flightResample :list = None, time : list = None, df = None):
         # initialize an axis
         fig, ax = plt.subplots(figsize=(20,10))
@@ -322,6 +347,9 @@ class ReadFlights():
         else:
             flights = df
         
-        flights.plot(x="longitude", y="latitude", c="altitude", kind="scatter", colormap= "YlOrRd", s=.1, ax=ax)
+
+        for id_ in flights['id_'].unique():
+            flights[flights['id_'] == id_].plot(x="longitude", y="latitude", c="altitude", kind="scatter", colormap= "YlOrRd", s=.1, ax=ax)
+
 
         # return fig
