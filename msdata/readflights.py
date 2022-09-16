@@ -206,63 +206,98 @@ class ReadFlights():
         wgs2merc = Transformer.from_crs("epsg:4326", "epsg:3857")
         merc2wgs = Transformer.from_crs("epsg:3857", "epsg:4326")
 
+        
+
         # resample the original dataframe
+
         # column ['id'] was deleted: --> non-numerical columns are removed in resample.
-        dr_ = dr.resample(sampleTime).mean()
+        # insert NAN values for the resampled fram
+        dr_ = dr.resample(sampleTime).mean()[1:]   # first value is before first occurance
+        dr_.loc[:] = np.nan # set all to nan prevent shifting of values 
+
+        # now the data set contains all intermediate points and core points
+        # combine both data sets to allow for interpolation
+        dr_ = dr.combine_first(dr_)
 
         # it makes no sence for interpolation of these values
         dr_ = dr_.drop(['speed','dir','id_'], axis = 1)
 
-        # consider shortes way is via pacific by checking longitudinal distance
+        # consider shortest way is via pacific by checking longitudinal distance
         isLeft = abs(dr_['longitude'].max() - dr_['longitude'].min()) > 180
 
         # change longitudinal coordinates ensuring correct interpolation
         if isLeft:
+            # bring the left hemisphere to the right side
             dr_['longitude'] = [ 360 + x if x < 0 else x for x in dr_['longitude']]
-            dr_ = dr_.interpolate('linear')
-            dr_['longitude'] = [ x - 360 if x > 180 else x for x in dr_['longitude']]
+            
+            # problem: merc2wgs assumes real coordinates for transformation, thus we have to split left and right hemisphere for interpolation 
+            # further more, at this splitting point we must know the coordinates!
 
-            # find closest point to dateline an add to dataset
-            dr_= pd.concat(
-                [ dr_, 
-                # dr_[dr_['longitude'] == dr_['longitude'].min()], 
-                dr_.loc[[str(dr_['longitude'].idxmin())]],   # [[]] double [[ is important
-                dr_[dr_['longitude'] == dr_['longitude'].max()]
-                ]
-                ).sort_index()
+            
+            # dr_ = dr_.interpolate('time')
+            # dr_['longitude'] = [ x - 360 if x > 180 else x for x in dr_['longitude']]
+
+            # # find closest point to dateline an add to dataset
+            # dr_= pd.concat(
+            #     [ dr_, 
+            #     # dr_[dr_['longitude'] == dr_['longitude'].min()], 
+            #     dr_.loc[[str(dr_['longitude'].idxmin())]],   # [[]] double [[ is important
+            #     dr_[dr_['longitude'] == dr_['longitude'].max()]
+            #     ]
+            #     ).sort_index()
             
 
+            # dr_['latitude'], dr_['longitude'] = wgs2merc.transform(dr_['latitude'], dr_['longitude'])
 
-            dr_['latitude'], dr_['longitude'] = wgs2merc.transform(dr_['latitude'], dr_['longitude'])
+            # # cut the dataset in east and west
+            # east  = dr_.loc[ : dr_['longitude'].diff().idxmax()][:-1]
 
-            # cut the dataset in east and west
-            east  = dr_.loc[ : dr_['longitude'].diff().idxmax()][:-1]
-            west  = dr_.loc[dr_['longitude'].diff().idxmax() : ]
+            # west  = dr_.loc[dr_['longitude'].diff().idxmax() : ]
 
-            east = east.resample(sampleTime).mean()
-            west = west.resample(sampleTime).mean()
+            # # east = pd.concat(east,east.resample(sampleTime).mean()[1:]).sort_index()
+            # # west = pd.concat(west,west.resample(sampleTime).mean()[1:]).sort_index()
+            # east = west.resample(sampleTime).mean()
+            # west = west.resample(sampleTime).mean()
             
-            east = east.interpolate('linear')
-            west = west.interpolate('linear')
+            # east = east.interpolate('time').sort_index()
+            # west = west.interpolate('time').sort_index()            
 
-            dr_ = pd.concat([east, west])
-            dr_['latitude'], dr_['longitude'] = merc2wgs.transform(dr_['latitude'], dr_['longitude'])
+            # # west = pd.concat([west,west.interpolate('time')]).sort_index()
+
+            # dr_ = pd.concat([east, west]).sort_index()
+            # dr_['latitude'], dr_['longitude'] = merc2wgs.transform(dr_['latitude'], dr_['longitude'])
             
         else:
+            print("yesss")
             dr_['latitude'], dr_['longitude'] = wgs2merc.transform(dr_['latitude'], dr_['longitude'])
-            dr_ = dr_.resample(sampleTime).mean()
-            dr_ = dr_.interpolate('linear')
+            testLat, testLong = wgs2merc.transform(10,179)
+            print(testLat)
+            
+            testLat, testLong = wgs2merc.transform(10,180)
+            print(testLat)
+
+            testLat, testLong = wgs2merc.transform(10,181)
+            print(testLat)
+
+
+            # dr_ = dr_.resample(sampleTime).mean()
+            dr_ = dr_.interpolate('time')
             dr_['latitude'], dr_['longitude'] = merc2wgs.transform(dr_['latitude'], dr_['longitude'])
 
         # remove all entries created, which are before first occurance and after last occurance
-        dr_ = dr_.loc[dr.index[0]:dr.index[-1]]
+        # dr_ = dr_.loc[dr.index[0]:dr.index[-1]]
 
         # join datasets
-        dr = pd.concat([dr, dr_]).sort_index()
+        # dr = pd.concat([dr, dr_]).sort_index()
+        # add speed and co back to the data set and fill up with these values
+        dr = dr.combine_first(dr_)
 
+
+        # fillup with values from the row above
         dr = dr.ffill()
 
         return dr
+
 
 
 
@@ -315,9 +350,10 @@ class ReadFlights():
         countries = gp.read_file(gp.datasets.get_path("naturalearth_lowres"))
         countries.plot(color="lightgrey", ax=ax)
 
+        flight.plot(x="longitude", y="latitude", kind="scatter", c="altitude", colormap= "YlOrRd", ax=ax)
         if flightResample is not None:
             flightResample.plot(x="longitude", y="latitude", kind="scatter", c = "green", s=.1, ax=ax)
-        flight.plot(x="longitude", y="latitude", kind="scatter", c="altitude", colormap= "YlOrRd", ax=ax)
+        
 
         # return fig
 
