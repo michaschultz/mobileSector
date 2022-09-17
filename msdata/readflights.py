@@ -203,6 +203,8 @@ class ReadFlights():
         #     print("flight " + str(flightID) + " not found.")
         
 
+        # 4326 is WGS 84: https://epsg.io/4326
+        # 4326 is WGS 84 / Pseudo-Mercator: https://epsg.io/3857
         wgs2merc = Transformer.from_crs("epsg:4326", "epsg:3857")
         merc2wgs = Transformer.from_crs("epsg:3857", "epsg:4326")
 
@@ -227,69 +229,40 @@ class ReadFlights():
 
         # change longitudinal coordinates ensuring correct interpolation
         if isLeft:
-            # bring the left hemisphere to the right side
+            # the idea is that one can easily turn the earth by 180° 
+            # important! bring the left hemisphere to the right side
             dr_['longitude'] = [ 360 + x if x < 0 else x for x in dr_['longitude']]
+            # turn hemisphere by 180°
+            dr_['longitude'] = dr_['longitude'] - 180
             
-            # problem: merc2wgs assumes real coordinates for transformation, thus we have to split left and right hemisphere for interpolation 
-            # further more, at this splitting point we must know the coordinates!
-
-            
-            # dr_ = dr_.interpolate('time')
-            # dr_['longitude'] = [ x - 360 if x > 180 else x for x in dr_['longitude']]
-
-            # # find closest point to dateline an add to dataset
-            # dr_= pd.concat(
-            #     [ dr_, 
-            #     # dr_[dr_['longitude'] == dr_['longitude'].min()], 
-            #     dr_.loc[[str(dr_['longitude'].idxmin())]],   # [[]] double [[ is important
-            #     dr_[dr_['longitude'] == dr_['longitude'].max()]
-            #     ]
-            #     ).sort_index()
-            
-
-            # dr_['latitude'], dr_['longitude'] = wgs2merc.transform(dr_['latitude'], dr_['longitude'])
-
-            # # cut the dataset in east and west
-            # east  = dr_.loc[ : dr_['longitude'].diff().idxmax()][:-1]
-
-            # west  = dr_.loc[dr_['longitude'].diff().idxmax() : ]
-
-            # # east = pd.concat(east,east.resample(sampleTime).mean()[1:]).sort_index()
-            # # west = pd.concat(west,west.resample(sampleTime).mean()[1:]).sort_index()
-            # east = west.resample(sampleTime).mean()
-            # west = west.resample(sampleTime).mean()
-            
-            # east = east.interpolate('time').sort_index()
-            # west = west.interpolate('time').sort_index()            
-
-            # # west = pd.concat([west,west.interpolate('time')]).sort_index()
-
-            # dr_ = pd.concat([east, west]).sort_index()
-            # dr_['latitude'], dr_['longitude'] = merc2wgs.transform(dr_['latitude'], dr_['longitude'])
-            
-        else:
-            print("yesss")
+            # do the transformation to get meters
             dr_['latitude'], dr_['longitude'] = wgs2merc.transform(dr_['latitude'], dr_['longitude'])
-            testLat, testLong = wgs2merc.transform(10,179)
-            print(testLat)
+            dr_ = dr_.interpolate('time')
+            dr_['latitude'], dr_['longitude'] = merc2wgs.transform(dr_['latitude'], dr_['longitude'])
             
-            testLat, testLong = wgs2merc.transform(10,180)
-            print(testLat)
-
-            testLat, testLong = wgs2merc.transform(10,181)
-            print(testLat)
-
-
-            # dr_ = dr_.resample(sampleTime).mean()
+            # turn earth back 
+            dr_['longitude'] = dr_['longitude'] + 180
+            # bring the left hemisphere back to its position
+            dr_['longitude'] = [ x - 360 if x > 180 else x for x in dr_['longitude']]
+        else:
+            dr_['latitude'], dr_['longitude'] = wgs2merc.transform(dr_['latitude'], dr_['longitude'])
             dr_ = dr_.interpolate('time')
             dr_['latitude'], dr_['longitude'] = merc2wgs.transform(dr_['latitude'], dr_['longitude'])
 
-        # remove all entries created, which are before first occurance and after last occurance
-        # dr_ = dr_.loc[dr.index[0]:dr.index[-1]]
+        # TODO: bring in correct interpolation for lat/lon
+        # from pyproj import Geod
 
-        # join datasets
-        # dr = pd.concat([dr, dr_]).sort_index()
-        # add speed and co back to the data set and fill up with these values
+        # lon0, lat0 = 170, 10
+        # lon1, lat1 = -170, 20
+        # n_extra_points = 5    
+
+        # geoid = Geod(ellps="WGS84")
+        # extra_points = geoid.npts(lon0, lat0, lon1, lat1, n_extra_points)
+
+        # print(extra_points)
+
+
+        # add speed and go back to the data set and fill up with these values
         dr = dr.combine_first(dr_)
 
 
