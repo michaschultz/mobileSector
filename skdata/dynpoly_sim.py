@@ -41,6 +41,7 @@ def myfun():
   
     # Code to send updated polys
     # a poly with the following 4 nodes: [Clat1,Clon1,Clat2,Clon2,Clat3,Clon3,Clat4,Clon4]
+    #don't know how to return them to be sent to the gui
     
     
     data = [
