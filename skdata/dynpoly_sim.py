@@ -40,7 +40,7 @@ def myfun():
     Clon4 = Clon - 1
   
     # Code to send updated polys
-    values =  [Clat1,Clon1,Clat2,Clon2,Clat3,Clon3,Clat4,Clon4]
+    # a poly with the following 4 nodes: [Clat1,Clon1,Clat2,Clon2,Clat3,Clon3,Clat4,Clon4]
    
     
     data = [
