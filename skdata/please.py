@@ -89,17 +89,4 @@ class Plea(core.Entity):
         Clon4 = Clon - 1
   
         stack.stack('poly square %s,%s,%s,%s,%s,%s,%s,%s' %(Clat1,Clon1,Clat2,Clon2,Clat3,Clon3,Clat4,Clon4))
-        '''
-        stack.stack('DEFWPT WP1 %s,%s' %(Clat1,Clon1))
-        stack.stack('DEFWPT WP2 %s,%s' %(Clat2,Clon2))
-        stack.stack('DEFWPT WP3 %s,%s' %(Clat3,Clon3))
-        stack.stack('DEFWPT WP4 %s,%s' %(Clat4,Clon4))
-        '''
-        #stack.stack('delay 0.015 square')
-
-        '''
-        stack.stack('delay 0.015 DEL WP1')
-        stack.stack('delay 0.015 DEL WP2')
-        stack.stack('delay 0.015 DEL WP3')
-        stack.stack('delay 0.015 DEL WP4')
-        '''
+        
